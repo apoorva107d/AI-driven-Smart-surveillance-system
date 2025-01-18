@@ -1,0 +1,58 @@
+
+
+
+import cv2
+import numpy as np
+import joblib
+import pygame  # Import pygame for playing sound
+
+# Constants
+img_size = (128, 128)  # Size to resize images for testing
+categories = ["aggressive", "non_aggressive"]  # Categories in your dataset
+alert_sound = "alert.wav"  # Path to your alert sound file (use a suitable file)
+
+# Initialize pygame mixer
+pygame.mixer.init()
+
+# Load the trained model
+clf = joblib.load("violence_detector_model.pkl")
+print("Model loaded successfully.")
+
+# Real-time testing using webcam
+def test_webcam(model, categories, img_size=(128, 128)):
+    cap = cv2.VideoCapture(0)  # Open webcam
+    
+    while True:
+        ret, frame = cap.read()
+        if not ret:
+            break
+        
+        # Resize frame to match model input size
+        resized_frame = cv2.resize(frame, img_size) / 255.0
+        flattened_frame = resized_frame.flatten().reshape(1, -1)
+        
+        # Make prediction
+        prediction = model.predict(flattened_frame)
+        label = categories[prediction[0]]
+        
+        # Display the prediction on the frame
+        cv2.putText(frame, label, (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
+        cv2.imshow("Webcam - Violence Detection", frame)
+        
+        # Play an alert sound if "aggressive" is detected
+        if label == "aggressive":
+            pygame.mixer.music.load(alert_sound)  # Load alert sound
+            pygame.mixer.music.play()  # Play alert sound
+
+        # Break the loop if the user presses 'q'
+        if cv2.waitKey(1) & 0xFF == ord('q'):
+            break
+
+    cap.release()
+    cv2.destroyAllWindows()
+
+# Run real-time detection on webcam feed
+print("Running real-time violence detection...")
+test_webcam(clf, categories)
+
+print("Process completed.")
